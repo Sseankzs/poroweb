@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { useServers, useRefreshServers } from "@/lib/use-servers";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
@@ -18,149 +20,13 @@ interface Server {
 }
 
 export default function ServerList() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{
-    username: string;
-    avatarUrl: string;
-  } | null>(null);
-  const [servers, setServers] = useState<Server[]>([]);
+  const { isLoggedIn, user, login, logout } = useAuth();
+  const { data, isLoading, error } = useServers(isLoggedIn);
+  const refreshServers = useRefreshServers();
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [botInstalled, setBotInstalled] = useState<Map<string, boolean>>(new Map());
 
-  // Check for existing session on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("http://localhost:2000/me", {
-          credentials: "include",
-          mode: "cors",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data.user) {
-            setIsLoggedIn(true);
-            setUser({
-              username: data.user.username,
-              avatarUrl: data.user.avatar_url,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  // Fetch servers when logged in
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchServers();
-    }
-  }, [isLoggedIn]);
-
-  const fetchServers = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:2000/me/guilds", {
-        credentials: "include",
-        mode: "cors",
-      });
-
-      if (response.ok) {
-        const guilds = await response.json();
-        // Initialize servers with empty channels array
-        const serversWithChannels = guilds.map((guild: any) => ({
-          ...guild,
-          channels: [],
-        }));
-        setServers(serversWithChannels);
-
-        // Check bot installation status for all guilds
-        const installationChecks = guilds.map(async (guild: any) => {
-          try {
-            const botCheckResponse = await fetch(
-              `http://localhost:2000/api/guilds/${guild.id}/bot-installed`,
-              {
-                credentials: "include",
-                mode: "cors",
-              }
-            );
-            if (botCheckResponse.ok) {
-              const isInstalled = await botCheckResponse.json();
-              return { guildId: guild.id, isInstalled };
-            }
-          } catch (error) {
-            console.error(`Failed to check bot installation for guild ${guild.id}:`, error);
-          }
-          return { guildId: guild.id, isInstalled: false };
-        });
-
-        const results = await Promise.all(installationChecks);
-        const installationMap = new Map(
-          results.map((result) => [result.guildId, result.isInstalled])
-        );
-        setBotInstalled(installationMap);
-
-        // Fetch channels for guilds where bot is installed
-        const channelFetches = results
-          .filter((result) => result.isInstalled)
-          .map(async (result) => {
-            try {
-              const channelsResponse = await fetch(
-                `http://localhost:2000/me/guilds/${result.guildId}/channels`,
-                {
-                  credentials: "include",
-                  mode: "cors",
-                }
-              );
-              if (channelsResponse.ok) {
-                const channels = await channelsResponse.json();
-                return { guildId: result.guildId, channels };
-              }
-            } catch (error) {
-              console.error(`Failed to fetch channels for guild ${result.guildId}:`, error);
-            }
-            return { guildId: result.guildId, channels: [] };
-          });
-
-        const channelResults = await Promise.all(channelFetches);
-        setServers((prevServers) =>
-          prevServers.map((server) => {
-            const channelData = channelResults.find((r) => r.guildId === server.id);
-            return channelData ? { ...server, channels: channelData.channels } : server;
-          })
-        );
-      }
-    } catch (error) {
-      console.error("Failed to fetch servers:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = () => {
-    window.location.href = "http://localhost:2000/login";
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("http://localhost:2000/logout", {
-        method: "POST",
-        credentials: "include",
-        mode: "cors",
-      });
-      setIsLoggedIn(false);
-      setUser(null);
-      setServers([]);
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
+  const servers = data?.servers ?? [];
+  const botInstalled = data?.botInstalled ?? new Map();
 
   const toggleServer = (serverId: string) => {
     setExpandedServers((prev) => {
@@ -190,55 +56,18 @@ export default function ServerList() {
         
         // Poll to check if the invite window is closed
         if (inviteWindow) {
-          const checkWindowClosed = setInterval(async () => {
+          const checkWindowClosed = setInterval(() => {
             if (inviteWindow.closed) {
               clearInterval(checkWindowClosed);
               
-              // Window closed, now check if bot was installed
-              try {
-                const botCheckResponse = await fetch(
-                  `http://localhost:2000/api/guilds/${guildId}/bot-installed`,
-                  {
-                    credentials: "include",
-                    mode: "cors",
-                  }
-                );
-
-                if (botCheckResponse.ok) {
-                  const isInstalled = await botCheckResponse.json();
-                  setBotInstalled((prev) => new Map(prev).set(guildId, isInstalled));
-
-                  // If bot is now installed, fetch channels
-                  if (isInstalled) {
-                    const channelsResponse = await fetch(
-                      `http://localhost:2000/me/guilds/${guildId}/channels`,
-                      {
-                        credentials: "include",
-                        mode: "cors",
-                      }
-                    );
-
-                    if (channelsResponse.ok) {
-                      const channels = await channelsResponse.json();
-                      setServers((prevServers) =>
-                        prevServers.map((s) =>
-                          s.id === guildId ? { ...s, channels } : s
-                        )
-                      );
-                    }
-                  }
-                }
-              } catch (error) {
-                console.error("Failed to check bot installation after invite:", error);
-              }
+              // Window closed, refresh server data using React Query
+              refreshServers.mutate(guildId);
             }
-          }, 500); // Check every 500ms if the window is closed
+          }, 1000);
         }
-      } else {
-        console.error("Failed to get bot invite URL");
       }
     } catch (error) {
-      console.error("Failed to fetch bot invite URL:", error);
+      console.error("Failed to get bot invite:", error);
     }
   };
 
@@ -248,8 +77,8 @@ export default function ServerList() {
         isLoggedIn={isLoggedIn}
         username={user?.username}
         avatarUrl={user?.avatarUrl}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
+        onLogin={login}
+        onLogout={logout}
       />
 
       <main className="flex-1 pt-16">
@@ -277,7 +106,7 @@ export default function ServerList() {
                 Please log in with Discord to view and manage your servers
               </p>
             </div>
-          ) : loading ? (
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent"></div>
             </div>

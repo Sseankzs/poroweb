@@ -2,25 +2,36 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/contexts/auth-context";
 
 interface HeaderProps {
-  isLoggedIn: boolean;
+  isLoggedIn?: boolean;
   isLoading?: boolean;
   username?: string;
   avatarUrl?: string;
-  onLogin: () => void;
-  onLogout: () => void;
+  onLogin?: () => void;
+  onLogout?: () => void;
 }
 
 export function Header({
-  isLoggedIn,
-  isLoading,
-  username,
-  avatarUrl,
-  onLogin,
-  onLogout,
+  isLoggedIn: isLoggedInProp,
+  isLoading: isLoadingProp,
+  username: usernameProp,
+  avatarUrl: avatarUrlProp,
+  onLogin: onLoginProp,
+  onLogout: onLogoutProp,
 }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const auth = useAuth();
+
+  // Use auth context if props are not provided
+  const isLoggedIn = isLoggedInProp ?? auth.isLoggedIn;
+  const isLoading = isLoadingProp ?? auth.isAuthLoading;
+  const username = usernameProp ?? auth.user?.username;
+  const avatarUrl = avatarUrlProp ?? auth.user?.avatarUrl;
+  const onLogin = onLoginProp ?? auth.login;
+  const onLogout = onLogoutProp ?? auth.logout;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -43,30 +54,18 @@ export function Header({
         </div>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <a
+          <Link
             href="/"
             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Home
-          </a>
-          <a
+          </Link>
+          <Link
             href="/serverlist"
             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Servers
-          </a>
-          <a
-            href="#features"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Features
-          </a>
-          <a
-            href="#about"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            About
-          </a>
+          </Link>
         </nav>
 
         <div className="flex items-center gap-4">
@@ -146,34 +145,20 @@ export function Header({
       {menuOpen && (
         <div className="border-t border-border bg-background px-6 py-4 md:hidden">
           <nav className="flex flex-col gap-4">
-            <a
+            <Link
               href="/"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={() => setMenuOpen(false)}
             >
               Home
-            </a>
-            <a
+            </Link>
+            <Link
               href="/serverlist"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={() => setMenuOpen(false)}
             >
               Servers
-            </a>
-            <a
-              href="#features"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => setMenuOpen(false)}
-            >
-              Features
-            </a>
-            <a
-              href="#about"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => setMenuOpen(false)}
-            >
-              About
-            </a>
+            </Link>
           </nav>
         </div>
       )}
