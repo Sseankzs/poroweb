@@ -5,6 +5,7 @@ import { useState } from "react";
 
 interface HeaderProps {
   isLoggedIn: boolean;
+  isLoading?: boolean;
   username?: string;
   avatarUrl?: string;
   onLogin: () => void;
@@ -13,6 +14,7 @@ interface HeaderProps {
 
 export function Header({
   isLoggedIn,
+  isLoading,
   username,
   avatarUrl,
   onLogin,
@@ -42,10 +44,16 @@ export function Header({
 
         <nav className="hidden items-center gap-8 md:flex">
           <a
-            href="#games"
+            href="/"
             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            Games
+            Home
+          </a>
+          <a
+            href="/serverlist"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Servers
           </a>
           <a
             href="#features"
@@ -62,7 +70,9 @@ export function Header({
         </nav>
 
         <div className="flex items-center gap-4">
-          {isLoggedIn ? (
+          {isLoading ? (
+            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+          ) : isLoggedIn ? (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 {avatarUrl ? (
@@ -137,11 +147,18 @@ export function Header({
         <div className="border-t border-border bg-background px-6 py-4 md:hidden">
           <nav className="flex flex-col gap-4">
             <a
-              href="#games"
+              href="/"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={() => setMenuOpen(false)}
             >
-              Games
+              Home
+            </a>
+            <a
+              href="/serverlist"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setMenuOpen(false)}
+            >
+              Servers
             </a>
             <a
               href="#features"
