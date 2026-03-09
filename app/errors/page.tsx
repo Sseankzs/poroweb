@@ -145,7 +145,7 @@ export default function ErrorsPage() {
       errorCodes: [401, 403, 429, 500, 502, 503],
     },
     {
-      endpoint: "/me/guilds/:guildId/channels",
+      endpoint: "/me/guilds/:guildId",
       method: "GET",
       description: "Fetch all channels in a specific guild",
       errorCodes: [401, 403, 404, 429, 500, 502, 503],

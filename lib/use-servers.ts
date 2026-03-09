@@ -1,9 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+interface Subscription {
+  game_id: number;
+  game_name: string;
+  enabled: boolean;
+}
+
 interface Channel {
   id: string;
   name: string;
   type: string;
+  subscriptions?: Subscription[];
 }
 
 interface Server {
@@ -64,7 +71,7 @@ async function checkBotInstalled(guildId: string): Promise<boolean> {
 async function fetchChannels(guildId: string): Promise<Channel[]> {
   try {
     const response = await fetch(
-      `http://localhost:2000/me/guilds/${guildId}/channels`,
+      `http://localhost:2000/me/guilds/${guildId}`,
       {
         credentials: "include",
         mode: "cors",
@@ -83,43 +90,51 @@ export function useServers(isLoggedIn: boolean) {
   return useQuery({
     queryKey: ["servers"],
     queryFn: async () => {
+      // First, fetch and return guilds immediately
       const guilds = await fetchGuilds();
       
-      // Check bot installation for all guilds
-      const installationChecks = await Promise.all(
-        guilds.map(async (guild) => ({
-          guildId: guild.id,
-          isInstalled: await checkBotInstalled(guild.id),
-        }))
-      );
-
-      const installationMap = new Map(
-        installationChecks.map((result) => [result.guildId, result.isInstalled])
-      );
-
-      // Fetch channels for guilds where bot is installed
-      const channelResults = await Promise.all(
-        installationChecks
-          .filter((result) => result.isInstalled)
-          .map(async (result) => ({
-            guildId: result.guildId,
-            channels: await fetchChannels(result.guildId),
-          }))
-      );
-
-      // Merge channels into servers
-      const serversWithChannels = guilds.map((server) => {
-        const channelData = channelResults.find((r) => r.guildId === server.id);
-        return channelData ? { ...server, channels: channelData.channels } : server;
-      });
-
       return {
-        servers: serversWithChannels,
-        botInstalled: installationMap,
+        servers: guilds,
+        botInstalled: new Map<string, boolean>(),
       };
     },
     enabled: isLoggedIn, // Only fetch when logged in
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+}
+
+// Hook to check bot installation status for each server
+export function useBotInstallation(guildId: string, isLoggedIn: boolean) {
+  const queryClient = useQueryClient();
+  
+  return useQuery({
+    queryKey: ["bot-installation", guildId],
+    queryFn: async () => {
+      const isInstalled = await checkBotInstalled(guildId);
+      
+      // If bot is installed, also fetch channels
+      if (isInstalled) {
+        const channels = await fetchChannels(guildId);
+        
+        // Update the server data in cache with channels
+        queryClient.setQueryData(["servers"], (oldData: any) => {
+          if (!oldData) return oldData;
+          
+          return {
+            ...oldData,
+            servers: oldData.servers.map((server: Server) =>
+              server.id === guildId ? { ...server, channels } : server
+            ),
+          };
+        });
+        
+        return { isInstalled, channels };
+      }
+      
+      return { isInstalled, channels: [] };
+    },
+    enabled: isLoggedIn && !!guildId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
