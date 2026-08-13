@@ -1,68 +1,50 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/auth-context";
+import { Card } from "@/components/card";
 import { Header } from "@/components/header";
 import { HeroSection } from "@/components/hero-section";
+import { StatsCard } from "@/components/stats-card";
 import { GamesSection } from "@/components/games-section";
 import { FeaturesSection } from "@/components/features-section";
 import { Footer } from "@/components/footer";
 
-
+/**
+ * A hierarchical grid, not a stack. Cards differ in span, tone and corner
+ * radius, so the page has a clear primary (the hero), secondaries (commands,
+ * pipeline) and an accent (stats).
+ */
 export default function Home() {
-  const { isLoggedIn, user, login, logout } = useAuth();
-  const [subscribedGames, setSubscribedGames] = useState<string[]>([]);
-  const queryClient = useQueryClient();
-
-  // Soft refresh on Ctrl+R
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === "r") {
-        e.preventDefault();
-        // Invalidate all queries to trigger a soft refresh
-        // React Query will only update UI if data has changed
-        queryClient.invalidateQueries();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [queryClient]);
-
-  const handleToggleSubscription = (gameId: string) => {
-    setSubscribedGames((prev) =>
-      prev.includes(gameId)
-        ? prev.filter((id) => id !== gameId)
-        : [...prev, gameId]
-    );
-  };
-
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <Header
-        isLoggedIn={isLoggedIn}
-        username={user?.username}
-        avatarUrl={user?.avatarUrl}
-        onLogin={login}
-        onLogout={logout}
-      />
+    <div className="min-h-screen bg-page px-4 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto grid max-w-(--grid-max) grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-6">
+        {/* Masthead — full width, shallow */}
+        <Card tone="forest" radius="bar" className="lg:col-span-6">
+          <Header />
+        </Card>
 
-      <HeroSection
-        isLoggedIn={isLoggedIn}
-        subscribedCount={subscribedGames.length}
-        onLogin={login}
-      />
+        {/* Primary: the dominant card */}
+        <Card id="top" tone="cream" radius="primary" className="lg:col-span-4">
+          <HeroSection />
+        </Card>
 
-      <GamesSection
-        isLoggedIn={isLoggedIn}
-        subscribedGames={subscribedGames}
-        onToggleSubscription={handleToggleSubscription}
-      />
+        {/* Accent: narrow, tall, loud, near-sharp */}
+        <Card tone="peach" radius="accent" className="lg:col-span-2">
+          <StatsCard />
+        </Card>
 
-      <FeaturesSection />
+        {/* Secondary: commands, full width so the player has room */}
+        <Card id="games" tone="cream" radius="primary" className="lg:col-span-6">
+          <GamesSection />
+        </Card>
 
-      <Footer />
-    </main>
+        {/* Secondary: the pipeline */}
+        <Card id="features" tone="sage" radius="primary" className="lg:col-span-6">
+          <FeaturesSection />
+        </Card>
+
+        {/* Close */}
+        <Card id="about" tone="forest" radius="bar" className="lg:col-span-6">
+          <Footer />
+        </Card>
+      </div>
+    </div>
   );
 }

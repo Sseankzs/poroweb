@@ -1,88 +1,166 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@custom-variant dark (&:is(.dark *));
+/* ─────────────────────────────────────────────────────────────────────────────
+   Poro Bot — Swiss editorial system
+
+   Rounded cards on a warm desk, arranged in a hierarchical grid — a dominant
+   card, supporting ones, and small accents — never a uniform stack.
+
+     page    #EFE7D6   the desk, visible only between cards
+     cream   #F7F2E7   light card
+     sage    #C8D8C5   light card
+     peach   #FE8254   THE accent — fills only
+     steel   #3F5A62   dark card
+     forest  #1E2C22   darkest card
+
+   One accent, not two. Peach is a FILL: as text it is 2.2:1 on cream and
+   1.7:1 on sage, so it never sets type on a light ground. Headings there take
+   forest (13:1). Peach carries the page through filled tags, the peach card,
+   button grounds and marks — and it does set type on forest (5.9:1), the one
+   ground dark enough for it.
+
+   Each card picks a TONE (.tone-* below), which redefines the tokens its
+   children read — so one heading component renders correctly on cream, peach
+   or steel without knowing which. Every pairing is AA or better; the
+   combinations that fail (steel text on peach, peach text on steel, both
+   2.99:1) are simply never produced.
+
+   Hairlines are used only where they separate content (between stats, between
+   command rows). The decorative column rules were removed: clipped inside
+   rounded cards they aligned with nothing and read as noise.
+   ──────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --background: oklch(0.12 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.16 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.16 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.98 0 0);
-  --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.22 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.72 0.15 160);
-  --accent-foreground: oklch(0.12 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0 0);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.72 0.15 160);
-  --chart-1: oklch(0.72 0.15 160);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.16 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.98 0 0);
-  --sidebar-primary-foreground: oklch(0.12 0 0);
-  --sidebar-accent: oklch(0.22 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.28 0 0);
-  --sidebar-ring: oklch(0.72 0.15 160);
+  --sage: #c8d8c5;
+  --forest: #1e2c22;
+  --peach: #fe8254;
+  --steel: #3f5a62;
+  --cream: #f7f2e7;
+  /* The desk the cards sit on. */
+  --page: #efe7d6;
+
+  --ground: var(--sage);
+  /* Orange is the SPOT colour: display type, tags, indices, marks. */
+  --ink: var(--forest);
+  /* Forest is the TEXT colour: body copy, the masthead, section labels.
+     9.8:1 on sage, so paragraphs are readable while the poster look holds. */
+  --text: var(--forest);
+  --text-soft: rgb(30 44 34 / 0.74); /* 4.99:1 on sage — AA */
+  /* Hairlines: the poster's column rules are a whisper, not a border. */
+  --rule: rgb(30 44 34 / 0.16);
+  --rule-strong: rgb(30 44 34 / 0.4);
+
+  /* shadcn-compatible aliases so existing primitives keep working. */
+  --background: var(--ground);
+  --foreground: var(--text);
+  --card: var(--ground);
+  --card-foreground: var(--text);
+  --popover: var(--ground);
+  --popover-foreground: var(--text);
+  --primary: var(--ink);
+  --primary-foreground: var(--ground);
+  --secondary: transparent;
+  --secondary-foreground: var(--text);
+  --muted: transparent;
+  --muted-foreground: var(--text-soft);
+  --accent: var(--ink);
+  --accent-foreground: var(--ground);
+  --destructive: var(--ink);
+  --destructive-foreground: var(--ground);
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--ink);
+
+  /* Radius carries hierarchy: the bigger the card's role, the softer its
+     corners. Primary cards are generous, structural bars are moderate, small
+     accent cards are nearly sharp — so the variation reads as a system rather
+     than as inconsistency. */
+  --radius-primary: 1.25rem;
+  --radius-bar: 0.75rem;
+  --radius-accent: 0.25rem;
+  --radius: var(--radius-primary);
+  --radius-inner: 0.625rem;
+
+  /* Cards lift off the page properly — three layers so the falloff reads as
+     real depth rather than a flat grey band. Tinted forest, never neutral
+     grey, so the shadow belongs to the palette. */
+  --card-shadow: 0 2px 4px rgb(30 44 34 / 0.08), 0 10px 20px -6px rgb(30 44 34 / 0.14),
+    0 28px 56px -18px rgb(30 44 34 / 0.22);
+
+  --grid-max: 82rem;
+  --grid-pad: 1.5rem;
 }
 
-.dark {
-  --background: oklch(0.12 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.16 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.16 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.98 0 0);
-  --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.22 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.72 0.15 160);
-  --accent-foreground: oklch(0.12 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0 0);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.72 0.15 160);
-  --chart-1: oklch(0.72 0.15 160);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.16 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.72 0.15 160);
-  --sidebar-primary-foreground: oklch(0.12 0 0);
-  --sidebar-accent: oklch(0.22 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.28 0 0);
-  --sidebar-ring: oklch(0.72 0.15 160);
+/* ── Card tones ──────────────────────────────────────────────────────────────
+   Each redefines the tokens its children read, so a heading, a rule or a meta
+   line adapts to whatever card it lands in without knowing which one.
+   Every pairing below is AA or better. */
+.tone-cream {
+  --ground: var(--cream);
+  --text: var(--forest);            /* 13.1:1 */
+  --text-soft: rgb(30 44 34 / 0.7);
+  --ink: var(--forest);
+  --rule: rgb(30 44 34 / 0.14);
+  --rule-strong: rgb(30 44 34 / 0.36);
+}
+
+.tone-sage {
+  --ground: var(--sage);
+  --text: var(--forest);            /* 9.8:1 */
+  --text-soft: rgb(30 44 34 / 0.74);
+  --ink: var(--forest);
+  --rule: rgb(30 44 34 / 0.16);
+  --rule-strong: rgb(30 44 34 / 0.4);
+}
+
+.tone-peach {
+  --ground: var(--peach);
+  --text: var(--forest);            /* 5.9:1 */
+  --text-soft: rgb(30 44 34 / 0.78);
+  --ink: var(--forest);             /* peach ground: the ink IS the dark */
+  --rule: rgb(30 44 34 / 0.22);
+  --rule-strong: rgb(30 44 34 / 0.45);
+}
+
+.tone-steel {
+  --ground: var(--steel);
+  --text: var(--cream);             /* 6.6:1 */
+  --text-soft: rgb(247 242 231 / 0.8);
+  --ink: var(--cream);              /* peach on steel is 2.99 — cream instead */
+  --rule: rgb(247 242 231 / 0.22);
+  --rule-strong: rgb(247 242 231 / 0.45);
+}
+
+.tone-forest {
+  --ground: var(--forest);
+  --text: var(--cream);             /* 13.1:1 */
+  --text-soft: rgb(247 242 231 / 0.72);
+  --ink: var(--peach);              /* 5.9:1 — the one card where peach reads */
+  --rule: rgb(247 242 231 / 0.18);
+  --rule-strong: rgb(247 242 231 / 0.4);
 }
 
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+
+  --color-page: var(--page);
+  --color-ground: var(--ground);
+  --color-peach: var(--peach);
+  --color-steel: var(--steel);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-text: var(--text);
+  --color-text-soft: var(--text-soft);
+  --color-forest: var(--forest);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -96,30 +174,81 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+
+  --radius-sm: 0.5rem;
+  --radius-md: var(--radius-inner);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-xl: calc(var(--radius) + 0.5rem);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--page);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Display type is LIGHT and tight. Weight 300 at size, never bold — bold is
+     reserved for the small uppercase labels. Headings take the tone's ink. */
+  h1,
+  h2 {
+    color: var(--ink);
+    font-weight: 300;
+    letter-spacing: -0.028em;
+    line-height: 0.95;
+  }
+}
+
+@layer components {
+  /* Small uppercase meta line — "Post by —", "— 001", "Swipe →". */
+  .meta {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    color: var(--text-soft);
+  }
+
+  /* The boxed "FREE" label: hairline box, bold, tracked out. Orange, so the
+     spot colour still punctuates the page. */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    color: var(--text);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  /* Filled variant — peach ground, forest type (5.9:1). This is how the
+     accent reaches light cards, since peach cannot set type on them. */
+  .tag-fill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    background: var(--peach);
+    color: var(--forest);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .rule-t {
+    border-top: 1px solid var(--rule);
+  }
+  .rule-b {
+    border-bottom: 1px solid var(--rule);
   }
 }

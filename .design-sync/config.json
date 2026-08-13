@@ -1,0 +1,44 @@
+{
+  "projectId": "a8a70a2e-4b0f-4cd3-ae22-a10693e4c433",
+  "shape": "package",
+  "pkg": "my-v0-project",
+  "globalName": "PoroBotUI",
+  "buildCmd": "npm run build",
+  "srcDir": "components",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".design-sync/.cache/css/compiled.css",
+  "dtsPropsFor": {
+    "Button": "/** Visual style. */\n  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';\n  /** Height and padding. The `icon*` sizes are square, for icon-only buttons. */\n  size?: 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg';\n  /** Render as the child element instead of a <button>, keeping the styles. Use for links. */\n  asChild?: boolean;\n  disabled?: boolean;\n  type?: 'button' | 'submit' | 'reset';\n  className?: string;\n  children?: React.ReactNode;\n  onClick?: React.MouseEventHandler<HTMLButtonElement>;",
+    "Header": "/** Takes no props. Fixed to the top of the viewport. */",
+    "HeroSection": "/** Takes no props. Full-width landing hero. */",
+    "GamesSection": "/** Takes no props. Full-width section listing the bot's commands. */",
+    "FeaturesSection": "/** Takes no props. Full-width section explaining the pipeline. */",
+    "Footer": "/** Takes no props. Full-width page footer. */"
+  },
+  "overrides": {
+    "Header": {
+      "cardMode": "single",
+      "viewport": "1200x140"
+    },
+    "HeroSection": {
+      "cardMode": "single",
+      "viewport": "1200x900"
+    },
+    "GamesSection": {
+      "cardMode": "single",
+      "viewport": "1200x900"
+    },
+    "FeaturesSection": {
+      "cardMode": "single",
+      "viewport": "1200x800"
+    },
+    "Footer": {
+      "cardMode": "single",
+      "viewport": "1200x560"
+    },
+    "Button": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
