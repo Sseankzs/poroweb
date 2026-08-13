@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { asset } from "@/lib/base-path";
 
 /**
  * Each command carries its own screen recording. Selecting one swaps the
@@ -105,10 +106,10 @@ export function CommandExplorer() {
             muted
             playsInline
             preload="metadata"
-            poster={`/showcase/${selected.clip}.jpg`}
+            poster={asset(`/showcase/${selected.clip}.jpg`)}
             aria-label={`${selected.name} running in Discord`}
           >
-            <source src={`/showcase/${selected.clip}.mp4`} type="video/mp4" />
+            <source src={asset(`/showcase/${selected.clip}.mp4`)} type="video/mp4" />
           </video>
         </div>
         <figcaption className="meta flex items-baseline justify-between gap-4">
