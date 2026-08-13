@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useServers, useRefreshServers, useBotInstallation } from "@/lib/use-servers";
+import { useServers, useRefreshServers, checkBotInstalled, fetchChannels } from "@/lib/use-servers";
+import { API_URL } from "@/lib/config";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useQueries } from "@tanstack/react-query";
@@ -47,6 +48,9 @@ interface ServerCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   onInviteBot: (guildId: string) => Promise<void>;
+  isInstalled: boolean;
+  botLoading: boolean;
+  channels: Channel[];
 }
 
 function ChannelGameSettings({ channel, serverId, serverName }: { channel: Channel; serverId: string; serverName: string }) {
@@ -77,7 +81,7 @@ function ChannelGameSettings({ channel, serverId, serverName }: { channel: Chann
     setLoading((prev) => ({ ...prev, [game.id]: true }));
 
     try {
-      const response = await fetch("http://localhost:2000/api/subscriptions/toggle", {
+      const response = await fetch(`${API_URL}/api/subscriptions/toggle`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -213,9 +217,7 @@ function ChannelGameSettings({ channel, serverId, serverName }: { channel: Chann
   );
 }
 
-function ServerCard({ server, isLoggedIn, isExpanded, onToggle, onInviteBot }: ServerCardProps) {
-  const { data: botData, isLoading: botLoading } = useBotInstallation(server.id, isLoggedIn);
-  const isInstalled = botData?.isInstalled ?? false;
+function ServerCard({ server, isLoggedIn, isExpanded, onToggle, onInviteBot, isInstalled, botLoading, channels }: ServerCardProps) {
 
   if (botLoading) {
     return (
@@ -267,8 +269,8 @@ function ServerCard({ server, isLoggedIn, isExpanded, onToggle, onInviteBot }: S
               <div>
                 <h3 className="text-lg font-semibold">{server.name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {server.channels.length} channel
-                  {server.channels.length !== 1 ? "s" : ""}
+                  {channels.length} channel
+                  {channels.length !== 1 ? "s" : ""}
                 </p>
               </div>
             </div>
@@ -295,7 +297,7 @@ function ServerCard({ server, isLoggedIn, isExpanded, onToggle, onInviteBot }: S
                 Channel Settings
               </h4>
               <div className="space-y-2">
-                {server.channels.map((channel) => (
+                {channels.map((channel) => (
                   <ChannelGameSettings
                     key={channel.id}
                     channel={channel}
@@ -303,7 +305,7 @@ function ServerCard({ server, isLoggedIn, isExpanded, onToggle, onInviteBot }: S
                     serverName={server.name}
                   />
                 ))}
-                {server.channels.length === 0 && (
+                {channels.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     No text channels found
                   </p>
@@ -366,42 +368,26 @@ export default function ServerList() {
 
   const servers = data?.servers ?? [];
 
-  // Use useQueries to fetch bot installation status for all servers
   const botInstallationQueries = useQueries({
     queries: servers.map((server) => ({
       queryKey: ["bot-installation", server.id],
-      queryFn: async () => {
-        const response = await fetch(
-          `http://localhost:2000/api/guilds/${server.id}/bot-installed`,
-          {
-            credentials: "include",
-            mode: "cors",
-          }
-        );
-        if (response.ok) {
-          return await response.json();
-        }
-        return false;
+      queryFn: async (): Promise<{ isInstalled: boolean; channels: Channel[] }> => {
+        const isInstalled = await checkBotInstalled(server.id);
+        if (!isInstalled) return { isInstalled: false, channels: [] };
+        const channels = await fetchChannels(server.id);
+        return { isInstalled, channels };
       },
       enabled: isLoggedIn && !!server.id,
       staleTime: 5 * 60 * 1000,
     })),
   });
 
-  // Sort servers based on loaded bot installation status
   const sortedServers = useMemo(() => {
     return [...servers].sort((a, b) => {
-      const aQuery = botInstallationQueries.find(
-        (q) => q.data !== undefined && servers.find((s) => s.id === a.id)
-      );
-      const bQuery = botInstallationQueries.find(
-        (q) => q.data !== undefined && servers.find((s) => s.id === b.id)
-      );
-      
-      const aInstalled = aQuery?.data ?? false;
-      const bInstalled = bQuery?.data ?? false;
-      
-      // Sort installed first (true > false)
+      const aIdx = servers.findIndex((s) => s.id === a.id);
+      const bIdx = servers.findIndex((s) => s.id === b.id);
+      const aInstalled = botInstallationQueries[aIdx]?.data?.isInstalled ?? false;
+      const bInstalled = botInstallationQueries[bIdx]?.data?.isInstalled ?? false;
       if (aInstalled === bInstalled) return 0;
       return bInstalled ? 1 : -1;
     });
@@ -422,7 +408,7 @@ export default function ServerList() {
   const handleInviteBot = async (guildId: string) => {
     try {
       const response = await fetch(
-        `http://localhost:2000/api/guilds/${guildId}/bot-invite`,
+        `${API_URL}/api/guilds/${guildId}/bot-invite`,
         {
           credentials: "include",
           mode: "cors",
@@ -497,16 +483,23 @@ export default function ServerList() {
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedServers.map((server) => (
-                <ServerCard
-                  key={server.id}
-                  server={server}
-                  isLoggedIn={isLoggedIn}
-                  isExpanded={expandedServers.has(server.id)}
-                  onToggle={() => toggleServer(server.id)}
-                  onInviteBot={handleInviteBot}
-                />
-              ))}
+              {sortedServers.map((server) => {
+                const idx = servers.findIndex((s) => s.id === server.id);
+                const q = botInstallationQueries[idx];
+                return (
+                  <ServerCard
+                    key={server.id}
+                    server={server}
+                    isLoggedIn={isLoggedIn}
+                    isExpanded={expandedServers.has(server.id)}
+                    onToggle={() => toggleServer(server.id)}
+                    onInviteBot={handleInviteBot}
+                    isInstalled={q?.data?.isInstalled ?? false}
+                    botLoading={q?.isLoading ?? true}
+                    channels={q?.data?.channels ?? []}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

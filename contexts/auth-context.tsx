@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { API_URL } from "@/lib/config";
 
 interface User {
   username: string;
@@ -25,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch("http://localhost:2000/me", {
+      const response = await fetch(`${API_URL}/me`, {
         credentials: "include",
         mode: "cors",
       });
@@ -61,12 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = () => {
-    window.location.href = "http://localhost:2000/auth/discord/login";
+    window.location.href = `${API_URL}/auth/discord/login`;
   };
 
   const logout = async () => {
     try {
-      await fetch("http://localhost:2000/logout", {
+      await fetch(`${API_URL}/logout`, {
         method: "POST",
         credentials: "include",
         mode: "cors",
