@@ -11,23 +11,9 @@ export const metadata: Metadata = {
   title: 'Poro Bot — League of Legends Patch Notes for Discord',
   description:
     'A self-hosted Discord bot that turns League of Legends patch notes into structured summaries, and looks up champion counters on demand.',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+  // Icons come from app/icon.png and app/apple-icon.png via Next's file
+  // convention, so the /poroweb basePath is applied for us. Declaring them
+  // here instead would emit root-relative URLs that 404 on GitHub Pages.
 }
 
 export default function RootLayout({
