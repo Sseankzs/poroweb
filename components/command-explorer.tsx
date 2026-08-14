@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { asset } from "@/lib/base-path";
 
@@ -55,6 +55,39 @@ const COMMANDS = [
 export function CommandExplorer() {
   const [active, setActive] = useState(0);
   const selected = COMMANDS[active];
+  const videos = useRef<(HTMLVideoElement | null)[]>([]);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+
+  // Every clip stays mounted, so switching is just a play/pause — nothing is
+  // torn down, re-fetched, or re-laid-out. Restart from the top so a command
+  // you return to plays from the beginning rather than mid-scroll.
+  useEffect(() => {
+    videos.current.forEach((video, i) => {
+      if (!video) return;
+      if (i === active) {
+        video.currentTime = 0;
+        // Autoplay can still be refused; the poster stands in if it is.
+        void video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    });
+  }, [active]);
+
+  // Buffer the unopened clips once the page has settled. Marking them all
+  // preload="auto" up front would put ~2 MB on the critical path for clips
+  // most visitors never reach.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      videos.current.forEach((video, i) => {
+        if (!video || i === activeRef.current) return;
+        video.preload = "auto";
+        video.load();
+      });
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     // The clips are 2:3 portrait — cropped to the Discord response itself — so
@@ -96,21 +129,31 @@ export function CommandExplorer() {
       </ul>
 
       <figure className="flex flex-col gap-3">
-        <div className="overflow-hidden rounded-(--radius-inner) border border-rule-strong">
-          {/* key forces a remount so the clip restarts when you switch command */}
-          <video
-            key={selected.clip}
-            className="block w-full"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            poster={asset(`/showcase/${selected.clip}.jpg`)}
-            aria-label={`${selected.name} running in Discord`}
-          >
-            <source src={asset(`/showcase/${selected.clip}.mp4`)} type="video/mp4" />
-          </video>
+        {/* The box holds the sources' own 366x540 ratio, so it keeps its height
+            whether or not a clip has metadata yet — no collapse-and-jump on
+            switch. The players are stacked inside it and cross-faded. */}
+        <div className="relative aspect-366/540 overflow-hidden rounded-(--radius-inner) border border-rule-strong">
+          {COMMANDS.map((command, i) => (
+            <video
+              key={command.clip}
+              ref={(el) => {
+                videos.current[i] = el;
+              }}
+              className={cn(
+                "absolute inset-0 block h-full w-full object-cover transition-opacity duration-300",
+                i === active ? "opacity-100" : "opacity-0"
+              )}
+              loop
+              muted
+              playsInline
+              preload={i === 0 ? "auto" : "metadata"}
+              poster={asset(`/showcase/${command.clip}.jpg`)}
+              aria-hidden={i !== active}
+              aria-label={`${command.name} running in Discord`}
+            >
+              <source src={asset(`/showcase/${command.clip}.mp4`)} type="video/mp4" />
+            </video>
+          ))}
         </div>
         <figcaption className="meta flex items-baseline justify-between gap-4">
           <span>{selected.caption}</span>
